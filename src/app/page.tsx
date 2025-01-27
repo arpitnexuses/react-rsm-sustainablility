@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -16,12 +16,17 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [currentFunFact, setCurrentFunFact] = useState('');
+  const [shownFacts] = useState(new Set());
 
   const funFacts = [
     "Did you know? The concept of ESG was first introduced in a 2004 United Nations report titled 'Who Cares Wins'.",
     "Fun fact: The first global ESG index was launched by the Dow Jones in 1999.",
     "Interesting tidbit: More than 80% of the world's largest companies now report on ESG metrics.",
-    // ... add all fun facts here
+    "Curious fact: The 'E' in ESG focuses on environmental factors like carbon emissions, water usage, and biodiversity.",
+    "Did you know? The social pillar in ESG evaluates factors like employee welfare, diversity, and community engagement.",
+    "Fun fact: ESG investing assets surpassed $35 trillion globally in 2020, accounting for over one-third of total managed assets.",
+    // ... add all fun facts here as in index.html
   ];
 
   const actionButtons = [
@@ -49,6 +54,18 @@ export default function Home() {
       .replace(/\n/g, '<br>');
   };
 
+  const getNewFact = useCallback(() => {
+    if (shownFacts.size === funFacts.length) {
+      shownFacts.clear();
+    }
+    let fact;
+    do {
+      fact = funFacts[Math.floor(Math.random() * funFacts.length)];
+    } while (shownFacts.has(fact));
+    shownFacts.add(fact);
+    return fact;
+  }, [funFacts, shownFacts]);
+
   const sendMessage = async (text: string = inputMessage) => {
     if (!text.trim()) return;
 
@@ -62,6 +79,13 @@ export default function Home() {
     setInputMessage('');
     setIsLoading(true);
 
+    // Start fun fact interval
+    const updateFunFact = () => {
+      setCurrentFunFact(getNewFact());
+    };
+    updateFunFact();
+    const funFactInterval = setInterval(updateFunFact, 5000);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -71,15 +95,42 @@ export default function Home() {
         body: JSON.stringify({ message: text }),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
-      const assistantMessage: Message = {
-        content: data.response,
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let assistantMessage: Message = {
+        content: '',
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        try {
+          const data = JSON.parse(chunk);
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          assistantMessage = {
+            ...assistantMessage,
+            content: data.response
+          };
+          setMessages(prev => [...prev.slice(0, -1), assistantMessage]);
+        } catch (e) {
+          console.error('Error parsing chunk:', e);
+        }
+      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = {
@@ -90,6 +141,8 @@ export default function Home() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      clearInterval(funFactInterval);
+      setCurrentFunFact('');
     }
   };
 
@@ -204,10 +257,19 @@ export default function Home() {
               </div>
             ))}
             {isLoading && (
-              <div className="loader-container">
-                <div className="loader"></div>
-                <div className="loader-text">
-                  Thinking<span>.</span><span>.</span><span>.</span>
+              <div className="flex justify-start">
+                <div className="inline-block bg-gray-100 rounded-lg px-4 py-2 w-full">
+                  <div className="loader-container">
+                    <div className="loader"></div>
+                    <div className="loader-text">
+                      Thinking<span>.</span><span>.</span><span>.</span>
+                    </div>
+                  </div>
+                  {currentFunFact && (
+                    <div className="fun-fact text-sm text-gray-600 mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      {currentFunFact}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -238,6 +300,13 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Search Type Select */}
+        <select 
+          className="w-full p-2 mt-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+        >
+          <option value="all">RSM Sustainability AI Assistant</option>
+        </select>
       </div>
     </div>
   );

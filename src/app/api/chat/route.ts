@@ -42,6 +42,12 @@ async function waitForRunCompletion(threadId: string, runId: string, maxRetries 
   throw new Error("Maximum retries reached while waiting for run completion");
 }
 
+// Add this export config for Vercel
+export const config = {
+  runtime: 'edge',
+  maxDuration: 60, // This sets a 60-second timeout
+};
+
 export async function POST(request: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -55,56 +61,76 @@ export async function POST(request: Request) {
       return NextResponse.json({ response: 'No message provided' }, { status: 400 });
     }
 
-    try {
-      // Create thread with the user's message
-      const thread = await openai.beta.threads.create({
-        messages: [
-          {
-            role: "user",
-            content: userMessage
+    // Create a TransformStream for streaming the response
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+
+    // Start processing in the background
+    (async () => {
+      try {
+        // Create thread with the user's message
+        const thread = await openai.beta.threads.create({
+          messages: [
+            {
+              role: "user",
+              content: userMessage
+            }
+          ]
+        });
+
+        // Create and run the assistant
+        const run = await openai.beta.threads.runs.create(
+          thread.id,
+          { 
+            assistant_id: ASSISTANT_ID,
+            instructions: "You are a helpful assistant that provides information about IFRS S1 & S2 for GCC Businesses."
           }
-        ]
-      });
+        );
 
-      // Create and run the assistant
-      const run = await openai.beta.threads.runs.create(
-        thread.id,
-        { 
-          assistant_id: ASSISTANT_ID,
-          instructions: "You are a helpful assistant that provides information about IFRS S1 & S2 for GCC Businesses."
+        // Wait for the run to complete
+        await waitForRunCompletion(thread.id, run.id);
+
+        // Get the assistant's response
+        const messages = await openai.beta.threads.messages.list(thread.id);
+        
+        if (!messages.data.length) {
+          throw new Error('No response received from assistant');
         }
-      );
 
-      // Wait for the run to complete
-      await waitForRunCompletion(thread.id, run.id);
+        // Get the latest message content
+        const messageContent = messages.data[0].content[0];
+        if (messageContent.type !== 'text') {
+          throw new Error('Unexpected response format from assistant');
+        }
 
-      // Get the assistant's response
-      const messages = await openai.beta.threads.messages.list(thread.id);
-      
-      if (!messages.data.length) {
-        return NextResponse.json({ response: 'No response received from assistant' }, { status: 500 });
+        // Clean and format the response
+        const cleanedResponse = messageContent.text.value
+          .replace(/【[^】]+】/g, '')
+          .trim();
+
+        // Write the response to the stream
+        await writer.write(encoder.encode(JSON.stringify({ response: cleanedResponse })));
+      } catch (error) {
+        await writer.write(
+          encoder.encode(
+            JSON.stringify({
+              error: error instanceof Error ? error.message : 'An error occurred'
+            })
+          )
+        );
+      } finally {
+        await writer.close();
       }
+    })();
 
-      // Get the latest message content
-      const messageContent = messages.data[0].content[0];
-      if (messageContent.type !== 'text') {
-        return NextResponse.json({ response: 'Unexpected response format from assistant' }, { status: 500 });
-      }
-
-      // Clean and format the response
-      const cleanedResponse = messageContent.text.value
-        .replace(/【[^】]+】/g, '')
-        .trim();
-
-      return NextResponse.json({ response: cleanedResponse });
-
-    } catch (apiError) {
-      console.error("OpenAI API Error:", apiError);
-      return NextResponse.json({
-        response: 'Error communicating with the AI assistant. Please try again later.',
-        error: apiError instanceof Error ? apiError.message : 'Unknown API error'
-      }, { status: 500 });
-    }
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
 
   } catch (error) {
     console.error("Error in chat endpoint:", error);
