@@ -42,11 +42,8 @@ async function waitForRunCompletion(threadId: string, runId: string, maxRetries 
   throw new Error("Maximum retries reached while waiting for run completion");
 }
 
-// Add this export config for Vercel
-export const config = {
-  runtime: 'edge',
-  maxDuration: 60, // This sets a 60-second timeout
-};
+// Replace the old config with the new runtime config
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
