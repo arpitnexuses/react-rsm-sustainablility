@@ -166,26 +166,26 @@ export default function Home() {
   }, [messages]);
 
   return (
-    <div className="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg custom-shadow w-full max-w-4xl p-6">
+    <div className="bg-gray-100 min-h-screen flex items-center justify-center p-8">
+      <div className="bg-white rounded-lg custom-shadow w-full max-w-5xl p-8">
         {/* Logo */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-8">
           <Image
             src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/rsm-international-vector-logo_2_eb7fb9d1-228a-426a-b682-c0d24dc736fa.jpg"
             alt="RSM Logo"
-            width={200}
-            height={64}
-            className="h-16 w-auto"
+            width={240}
+            height={80}
+            className="h-20 w-auto"
           />
         </div>
 
         {/* Header */}
-        <h1 className="text-3xl font-bold mb-2">Hi Dear, <span className="text-green-600">Reader</span></h1>
-        <h2 className="text-2xl text-green-600 mb-2">Welcome to RSM's - IFRS S1 & S2 for GCC Businesses.</h2>
-        <p className="text-gray-600 mb-6">Use one of the most common prompts below or use your own to begin</p>
+        <h1 className="text-4xl font-bold mb-3">Hi Dear, <span className="text-green-600">Reader</span></h1>
+        <h2 className="text-2xl text-green-600 mb-3">Welcome to RSM's - IFRS S1 & S2 for GCC Businesses.</h2>
+        <p className="text-gray-600 mb-8">Use one of the most common prompts below or use your own to begin</p>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <Link
             href="https://cdn-nexlink.s3.us-east-2.amazonaws.com/RSM_IFRS_Newsletter_compressed_60b4b697-ac77-4c14-9942-d40e68e3a645.pdf"
             target="_blank"
@@ -229,7 +229,7 @@ export default function Home() {
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           {actionButtons.map((button, index) => (
             <button
               key={index}
@@ -243,11 +243,11 @@ export default function Home() {
         </div>
 
         {/* Chat Container */}
-        <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-          <div ref={chatContainerRef} className="chat-container p-4 space-y-4">
+        <div className="bg-white rounded-lg overflow-hidden border border-gray-200 mb-6">
+          <div ref={chatContainerRef} className="chat-container p-6 space-y-6">
             {messages.map((msg, index) => (
               <div key={index} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
-                <div className={`inline-block ${msg.isUser ? 'bg-green-100' : 'bg-gray-100'} rounded-lg px-4 py-2 max-w-[70%]`}>
+                <div className={`inline-block ${msg.isUser ? 'bg-green-100' : 'bg-gray-100'} rounded-lg px-6 py-3 max-w-[75%]`}>
                   <div 
                     className="text-sm"
                     dangerouslySetInnerHTML={{ __html: msg.isUser ? msg.content : formatMessage(msg.content) }}
@@ -276,15 +276,15 @@ export default function Home() {
           </div>
 
           {/* Input Area */}
-          <div className="bg-gray-50 p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
+          <div className="bg-gray-50 p-6 border-t border-gray-200">
+            <div className="flex items-center space-x-4">
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Ask about RSM Sustainability..."
-                className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
                 maxLength={1000}
               />
               <span className="text-sm text-gray-500 whitespace-nowrap">
@@ -293,7 +293,7 @@ export default function Home() {
               <button
                 onClick={() => sendMessage()}
                 disabled={isLoading}
-                className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 <i className="fas fa-paper-plane"></i>
               </button>
@@ -303,7 +303,7 @@ export default function Home() {
 
         {/* Search Type Select */}
         <select 
-          className="w-full p-2 mt-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+          className="w-full p-3 mt-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
         >
           <option value="all">RSM Sustainability AI Assistant</option>
         </select>
